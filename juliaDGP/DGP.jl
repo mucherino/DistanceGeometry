@@ -110,7 +110,7 @@ struct DGP{T} <: DistList{T}
       new{T}(R.K,distlist,collect(values(order)));
    end
 
-   # constructor from STAR file
+   # constructor from STAR file (NMR data, we ignore uncertain distances)
    function DGP(STARfile::String)
       ex = get_extension(STARfile);
       if ex != "str"
@@ -148,12 +148,14 @@ struct DGP{T} <: DistList{T}
                   resnum1 = nothing;  resnum2 = nothing;
                   resname1 = nothing; resname2 = nothing;
                   name1 = nothing;    name2 = nothing;
-                  lb = nothing;
-                  ub = nothing;
+                  lb = nothing;       ub = nothing;
+                  uncertain = false;
 
                   # reading
                   for i in 1:n
-                     if contains(identifiers[i],"PDB_residue_no_1")
+                     if contains(identifiers[i],"Member_logic_code")
+                        if (String(splitline[i]) == "OR") uncertain = true; break end  # we skip it!
+                     elseif contains(identifiers[i],"PDB_residue_no_1")
                         resnum1 = parse(Int64,String(splitline[i]));
                      elseif contains(identifiers[i],"PDB_residue_no_2")
                         resnum2 = parse(Int64,String(splitline[i]));
@@ -161,9 +163,9 @@ struct DGP{T} <: DistList{T}
                         resname1 = String(splitline[i]);
                      elseif contains(identifiers[i],"PDB_residue_name_2")
                         resname2 = String(splitline[i]);
-                     elseif contains(identifiers[i],"PDB_atom_name_1")
+                     elseif contains(identifiers[i],"Auth_atom_ID_1")
                         name1 = String(splitline[i]);
-                     elseif contains(identifiers[i],"PDB_atom_name_2")
+                     elseif contains(identifiers[i],"Auth_atom_ID_2")
                         name2 = String(splitline[i]);
                      elseif contains(identifiers[i],"Distance_lower_bound_val")
                         lb = parse(Float64,String(splitline[i]));
@@ -173,16 +175,20 @@ struct DGP{T} <: DistList{T}
                   end
 
                   # defining the data structures
-                  if (resnum1 == nothing || resnum2 == nothing) throw(ArgumentError("Something went wrong...")) end
-                  if (resname1 == nothing || resname2 == nothing) throw(ArgumentError("Something went wrong...")) end
-                  if (name1 == nothing || name2 == nothing) throw(ArgumentError("Something went wrong...")) end
-                  a = myAtom(name1,resnum1,resname1);
-                  if !(a in order) push!(order,a) end
-                  b = myAtom(name2,resnum2,resname2);
-                  if !(b in order) push!(order,b) end
-                  if (lb == nothing || ub == nothing) throw(ArgumentError("Something went wrong...")) end
-                  D = Distance(lb,ub);
-                  push!(distlist,(a,b) => D);
+                  if !uncertain
+                     if (resnum1 == nothing || resnum2 == nothing) throw(ArgumentError("Something went wrong...")) end
+                     if (resname1 == nothing || resname2 == nothing) throw(ArgumentError("Something went wrong...")) end
+                     if (name1 == nothing || name2 == nothing) throw(ArgumentError("Something went wrong...")) end
+                     if (name1 == "HN")  name1 = "H" end
+                     a = myAtom(name1,resnum1,resname1);
+                     if !(a in order) push!(order,a) end
+                     if (name2 == "HN")  name2 = "H" end
+                     b = myAtom(name2,resnum2,resname2);
+                     if !(b in order) push!(order,b) end
+                     if (lb == nothing || ub == nothing) throw(ArgumentError("Something went wrong...")) end
+                     D = Distance(lb,ub);
+                     push!(distlist,(a,b) => D);
+                  end
                end
             elseif contains(line,"stop_")
                # stopping
