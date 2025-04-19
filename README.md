@@ -4,6 +4,11 @@
 This repository is meant to contain several software projects aiming at studying
 and solving the Distance Geometry Problem (DGP).
 
+**NEW**: The *stick model* was just included in the juliaDGP project!
+At the moment, the model is independent from the rest of the Julia code, and can
+be executed by loading the single file named [StickModel.jl](./juliaDGP/StickModel.jl).
+An article describing the stick model is currently under review.
+
 ## Subset Sum Problem (SSP)
 
 This is a C implementation of the Branch-and-Prune (BP) algorithm, initially developed
